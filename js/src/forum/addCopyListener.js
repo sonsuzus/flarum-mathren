@@ -5,8 +5,9 @@
  * See license text at https://github.com/KaTeX/KaTeX/blob/master/LICENSE.
  */
 
+import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
-import DiscussionPage from 'flarum/common/components/DiscussionPage';
+import DiscussionPage from 'flarum/forum/components/DiscussionPage';
 
 import copyDelimiters from './utils/katex/copyDelimiters';
 import katexReplaceWithTex from './utils/katex/katex2tex';
@@ -17,15 +18,15 @@ export default function addCopyListener() {
   extend(DiscussionPage.prototype, 'oncreate', function () {
     if (!app.forum.attribute('mathren.enable_copy_tex')) return;
 
-    const delimiters = getPrimaryDelimiters.bind(this, app.forum)();
+    const delimiters = getPrimaryDelimiters(app.forum);
 
-    // Global copy handler to modify behavior on .katex elements.
     document.addEventListener('copy', function (event) {
       const selection = window.getSelection();
 
       if (selection.isCollapsed || !event.clipboardData) {
-        return; // default action OK if selection is empty or unchangeable
+        return;
       }
+
       const clipboardData = event.clipboardData;
       const range = selection.getRangeAt(0);
 
@@ -34,16 +35,16 @@ export default function addCopyListener() {
       const fragment = range.cloneContents();
 
       if (!fragment.querySelector('.katex-mathml')) {
-        return; // default action OK if no .katex-mathml elements
+        return;
       }
 
-      const htmlContents = Array.prototype.map.call(fragment.childNodes, (el) => (el instanceof Text ? el.textContent : el.outerHTML)).join('');
+      const htmlContents = Array.prototype.map
+        .call(fragment.childNodes, (el) => (el instanceof Text ? el.textContent : el.outerHTML))
+        .join('');
 
-      // Preserve usual HTML copy/paste behavior.
       clipboardData.setData('text/html', htmlContents);
-      // Rewrite plain-text version.
       clipboardData.setData('text/plain', katexReplaceWithTex(fragment, copyDelimiters(delimiters)).textContent);
-      // Prevent normal copy handling.
+
       event.preventDefault();
     });
   });

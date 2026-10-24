@@ -12,18 +12,21 @@
     ],
     "type": "flarum-extension",
     "license": "MIT",
-    "authors": [{
-        "name": "Hasan Özbey",
-        "email": "hasanoozbey@gmail.com",
-        "homepage": "https://github.com/the-turk"
-    }],
+    "authors": [
+        {
+            "name": "Hasan Özbey",
+            "email": "hasanoozbey@gmail.com",
+            "homepage": "https://github.com/the-turk"
+        }
+    ],
     "support": {
         "issues": "https://github.com/the-turk/flarum-mathren/issues",
         "source": "https://github.com/the-turk/flarum-mathren",
         "docs": "https://katex.org/docs/options.html"
     },
     "require": {
-        "flarum/core": ">=1.2.0"
+        "php": "^8.3",
+        "flarum/core": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -33,6 +36,7 @@
     "extra": {
         "flarum-extension": {
             "title": "MathRen",
+            "category": "formatting",
             "icon": {
                 "name": "fas fa-square-root-alt",
                 "backgroundColor": "#b72a2a",

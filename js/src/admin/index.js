@@ -6,20 +6,21 @@
  */
 
 import { extend } from 'flarum/common/extend';
-
-import app from 'flarum/common/app';
+import app from 'flarum/admin/app';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import Select from 'flarum/common/components/Select';
 import Switch from 'flarum/common/components/Switch';
 
-app.initializers.add('the-turk-mathren', (app) => {
+app.initializers.add('the-turk-mathren', () => {
   extend(ExtensionPage.prototype, 'sections', function (items) {
-    if (this.extension.id != 'the-turk-mathren') return;
+    if (this.extension.id !== 'the-turk-mathren') return;
 
-    items.has('permissions') ? items.remove('permissions') : '';
+    if (items.has('permissions')) {
+      items.remove('permissions');
+    }
   });
 
-  app.extensionData.for('the-turk-mathren').registerSetting(function () {
+  app.registry.for('the-turk-mathren').registerSetting(function () {
     return (
       <div className="MathRen-SettingsContainer">
         <div className="MathRen-KatexOptions">
@@ -35,7 +36,12 @@ app.initializers.add('the-turk-mathren', (app) => {
             <div className="MathRen--delimiterGroup">
               <div className="helpText">{app.translator.trans('the-turk-mathren.admin.settings.block_delimiters_text')}</div>
               <div className="Form-group">
-                <input className="FormControl" type="text" bidi={this.setting('the-turk-mathren.block_delimiters')} placeholder="[math]%e%[/math]" />
+                <input
+                  className="FormControl"
+                  type="text"
+                  bidi={this.setting('the-turk-mathren.block_delimiters')}
+                  placeholder="[math]%e%[/math]"
+                />
               </div>
             </div>
             <div className="MathRen--delimiterGroup">
@@ -45,7 +51,7 @@ app.initializers.add('the-turk-mathren', (app) => {
                   className="FormControl"
                   type="text"
                   bidi={this.setting('the-turk-mathren.block_asciimath_delimiters')}
-                  placeholder="[asmath]%e%[asmath]"
+                  placeholder="[asmath]%e%[/asmath]"
                 />
               </div>
             </div>
@@ -69,7 +75,7 @@ app.initializers.add('the-turk-mathren', (app) => {
                   className="FormControl"
                   type="text"
                   bidi={this.setting('the-turk-mathren.inline_asciimath_delimiters')}
-                  placeholder="[iasmath]%e%[iasmath]"
+                  placeholder="[iasmath]%e%[/iasmath]"
                 />
               </div>
             </div>
@@ -82,7 +88,7 @@ app.initializers.add('the-turk-mathren', (app) => {
                   className="FormControl"
                   type="text"
                   bidi={this.setting('the-turk-mathren.alias_block_delimiters')}
-                  placeholder="$$%e%$$,₺₺%e%₺₺"
+                  placeholder="$$%e%$$, \[%e%\]"
                 />
               </div>
             </div>
@@ -102,7 +108,12 @@ app.initializers.add('the-turk-mathren', (app) => {
             <div className="MathRen--delimiterGroup">
               <div className="helpText">{app.translator.trans('the-turk-mathren.admin.settings.alias_inline_delimiters_text')}</div>
               <div className="Form-group">
-                <input type="text" className="FormControl" bidi={this.setting('the-turk-mathren.alias_inline_delimiters')} placeholder="\(%e%\)" />
+                <input
+                  type="text"
+                  className="FormControl"
+                  bidi={this.setting('the-turk-mathren.alias_inline_delimiters')}
+                  placeholder="\(%e%\)"
+                />
               </div>
             </div>
             <div className="MathRen--delimiterGroup">
@@ -128,7 +139,7 @@ app.initializers.add('the-turk-mathren', (app) => {
             </div>
             <div className="Form-group">
               <Select
-                value={this.setting(['the-turk-mathren.output_mode'])()}
+                value={this.setting('the-turk-mathren.output_mode')()}
                 options={{
                   html: 'HTML',
                   mathml: 'MathML',
@@ -141,7 +152,7 @@ app.initializers.add('the-turk-mathren', (app) => {
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting(['the-turk-mathren.enable_fleqn'])() && this.setting(['the-turk-mathren.enable_fleqn'])() !== '0'}
+              state={!!this.setting('the-turk-mathren.enable_fleqn')() && this.setting('the-turk-mathren.enable_fleqn')() !== '0'}
               onchange={this.settings['the-turk-mathren.enable_fleqn']}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.enable_fleqn_label')}
@@ -149,7 +160,7 @@ app.initializers.add('the-turk-mathren', (app) => {
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting(['the-turk-mathren.enable_leqno'])() && this.setting(['the-turk-mathren.enable_leqno'])() !== '0'}
+              state={!!this.setting('the-turk-mathren.enable_leqno')() && this.setting('the-turk-mathren.enable_leqno')() !== '0'}
               onchange={this.settings['the-turk-mathren.enable_leqno']}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.enable_leqno_label')}
@@ -157,7 +168,7 @@ app.initializers.add('the-turk-mathren', (app) => {
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting(['the-turk-mathren.color_is_text_color'])() && this.setting(['the-turk-mathren.color_is_text_color'])() !== '0'}
+              state={!!this.setting('the-turk-mathren.color_is_text_color')() && this.setting('the-turk-mathren.color_is_text_color')() !== '0'}
               onchange={this.settings['the-turk-mathren.color_is_text_color']}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.color_is_text_color_label')}
@@ -165,7 +176,7 @@ app.initializers.add('the-turk-mathren', (app) => {
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting(['the-turk-mathren.throw_on_error'])() && this.setting(['the-turk-mathren.throw_on_error'])() !== '0'}
+              state={!!this.setting('the-turk-mathren.throw_on_error')() && this.setting('the-turk-mathren.throw_on_error')() !== '0'}
               onchange={this.settings['the-turk-mathren.throw_on_error']}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.throw_on_error_label')}
@@ -254,9 +265,7 @@ app.initializers.add('the-turk-mathren', (app) => {
           <hr />
           <div className="Form-group">
             <Switch
-              state={
-                !!this.setting(['the-turk-mathren.enable_editor_buttons'])() && this.setting(['the-turk-mathren.enable_editor_buttons'])() !== '0'
-              }
+              state={!!this.setting('the-turk-mathren.enable_editor_buttons')() && this.setting('the-turk-mathren.enable_editor_buttons')() !== '0'}
               onchange={this.settings['the-turk-mathren.enable_editor_buttons']}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.enable_editor_buttons_label')}
@@ -264,7 +273,7 @@ app.initializers.add('the-turk-mathren', (app) => {
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting(['the-turk-mathren.aliases_as_primary'])() && this.setting(['the-turk-mathren.aliases_as_primary'])() !== '0'}
+              state={!!this.setting('the-turk-mathren.aliases_as_primary')() && this.setting('the-turk-mathren.aliases_as_primary')() !== '0'}
               onchange={this.settings['the-turk-mathren.aliases_as_primary']}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.aliases_as_primary_label')}
@@ -272,7 +281,7 @@ app.initializers.add('the-turk-mathren', (app) => {
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting(['the-turk-mathren.allow_asciimath'])() && this.setting(['the-turk-mathren.allow_asciimath'])() !== '0'}
+              state={!!this.setting('the-turk-mathren.allow_asciimath')() && this.setting('the-turk-mathren.allow_asciimath')() !== '0'}
               onchange={this.settings['the-turk-mathren.allow_asciimath']}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.allow_asciimath_label')}
@@ -280,7 +289,7 @@ app.initializers.add('the-turk-mathren', (app) => {
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting(['the-turk-mathren.enable_copy_tex'])() && this.setting(['the-turk-mathren.enable_copy_tex'])() !== '0'}
+              state={!!this.setting('the-turk-mathren.enable_copy_tex')() && this.setting('the-turk-mathren.enable_copy_tex')() !== '0'}
               onchange={this.settings['the-turk-mathren.enable_copy_tex']}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.enable_copy_tex_label')}

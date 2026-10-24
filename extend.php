@@ -9,7 +9,7 @@
 
 namespace TheTurk\MathRen;
 
-use Flarum\Api\Serializer\ForumSerializer;
+use Flarum\Api\Resource\ForumResource;
 use Flarum\Extend;
 
 return [
@@ -21,21 +21,21 @@ return [
         ->css(__DIR__.'/less/admin.less')
         ->js(__DIR__.'/js/dist/admin.js'),
 
-    (new Extend\Locales(__DIR__.'/locale')),
+    new Extend\Locales(__DIR__.'/locale'),
 
-    (new Extend\ApiSerializer(ForumSerializer::class))
-        ->attributes(LoadSettings::class),
+    (new Extend\ApiResourceFields(ForumResource::class))
+        ->fields(LoadSettings::class),
 
     (new Extend\Formatter())
         ->configure(ConfigureTextFormatter::class),
 
     (new Extend\Settings())
-        ->default('the-turk-mathren.alias_block_delimiters', '$$%e%$$,₺₺%e%₺₺')
-        ->default('the-turk-mathren.alias_inline_delimiters', '\\(%e%\\)')
+        ->default('the-turk-mathren.alias_block_delimiters', '$$%e%$$, \[%e%\]')
+        ->default('the-turk-mathren.alias_inline_delimiters', '\(%e%\)')
         ->default('the-turk-mathren.block_delimiters', '[math]%e%[/math]')
         ->default('the-turk-mathren.inline_delimiters', '[imath]%e%[/imath]')
-        ->default('the-turk-mathren.alias_block_asciimath_delimiters', '\\$%e%\\$')
-        ->default('the-turk-mathren.alias_inline_asciimath_delimiters', '\\{%e%\\}')
+        ->default('the-turk-mathren.alias_block_asciimath_delimiters', '\$%e%\$')
+        ->default('the-turk-mathren.alias_inline_asciimath_delimiters', '\{%e%\}')
         ->default('the-turk-mathren.block_asciimath_delimiters', '[asmath]%e%[/asmath]')
         ->default('the-turk-mathren.inline_asciimath_delimiters', '[iasmath]%e%[/iasmath]')
         ->default('the-turk-mathren.color_is_text_color', '0')

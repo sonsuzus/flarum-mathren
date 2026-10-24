@@ -5,8 +5,9 @@
  * file that was distributed with this source code.
  */
 
+import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
-import TextEditor from 'flarum/components/TextEditor';
+import TextEditor from 'flarum/common/components/TextEditor';
 
 import TextEditorButton from './components/TextEditorButton';
 

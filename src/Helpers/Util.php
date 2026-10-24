@@ -14,45 +14,25 @@ use Illuminate\Support\Str;
 
 class Util
 {
-    const EXPRESSION_PLACEHOLDER = '%e%';
+    public const EXPRESSION_PLACEHOLDER = '%e%';
 
-    protected $prefix = 'the-turk-mathren.';
+    protected string $prefix = 'the-turk-mathren.';
 
-    /**
-     * @var SettingsRepositoryInterface
-     */
-    protected $settings;
-
-    /**
-     * Gets the settings variable. Called on Object creation.
-     *
-     * @param Settings $settings All settings provided by the interface.
-     */
-    public function __construct(SettingsRepositoryInterface $settings)
-    {
-        $this->settings = $settings;
+    public function __construct(
+        protected SettingsRepositoryInterface $settings
+    ) {
     }
 
     /**
      * This method will make prefixed calls easier.
-     *
-     * @param string $key     The setting key that will be fetched from the db.
-     * @param string $default The default value if there is no setting record.
-     *
-     * @return string
      */
     public function get(string $key, string $default = ''): string
     {
-        return $this->settings->get($this->prefix.$key, $default);
+        return (string) ($this->settings->get($this->prefix.$key, $default) ?? $default);
     }
 
     /**
      * KaTeX options those to be used through this extension.
-     * `displayMode` will be set on `ConfigureTextFormatter` class.
-     *
-     * @see    https://katex.org/docs/autorender.html
-     *
-     * @return array
      */
     public function getKatexOptions(): array
     {
@@ -72,24 +52,17 @@ class Util
 
     /**
      * Create a classes array that will be used to wrap expressions.
-     *
-     * @return array
      */
     public function getClasses(): array
     {
         return [
-            // class for block expressions [displayMode: true]
-            'block' => 'mathren-block',
-
-            // class for inline expressions [displayMode: false]
+            'block'  => 'mathren-block',
             'inline' => 'mathren-inline',
         ];
     }
 
     /**
      * Create a delimiters array that categorized by their type.
-     *
-     * @return array
      */
     private function _getDelimitersByType(): array
     {
@@ -107,75 +80,44 @@ class Util
 
     /**
      * This function creates an array of delimiters to be used in various places.
-     * Its elements are also an array and looks like this:
-     * [[left] => '[math]', [right] => '[/math]', [display] => true]
-     * ^ they're created by `$this->_setOptions();`.
-     *
-     * @param string $type                 The delimiter type that we're creating an array for.
-     *                                     Accepted types are `bbcode` and `alias`. If not set,
-     *                                     returning array will include all delimiters.
-     * @param bool   $isAsciiMathDelimiter To check whether it's an AsciiMath delimiter.
-     *
-     * @return array
      */
-    public function getDelimitersWithOptions(string $type, bool $isAsciiMathDelimiter = false): array
+    public function getDelimitersWithOptions(string $type = '', bool $isAsciiMathDelimiter = false): array
     {
         $categorizedDelimiters = $this->_getDelimitersByType();
         $delimitersWithOptions = [];
-        $desiredKeys = [];
 
-        switch ($type) {
-            case 'bbcode':
-                if ($isAsciiMathDelimiter) {
-                    $desiredKeys = ['blockAscii', 'inlineAscii'];
-                } else {
-                    $desiredKeys = ['block', 'inline'];
-                }
-                break;
-            case 'alias':
-                if ($isAsciiMathDelimiter) {
-                    $desiredKeys = ['aliasBlockAscii', 'aliasInlineAscii'];
-                } else {
-                    $desiredKeys = ['aliasBlock', 'aliasInline'];
-                }
-                break;
-            default:
-                if ($isAsciiMathDelimiter) {
-                    $desiredKeys = ['blockAscii', 'aliasBlockAscii', 'inlineAscii', 'aliasInlineAscii'];
-                } else {
-                    $desiredKeys = ['block', 'inline', 'aliasBlock', 'aliasInline'];
-                }
-                break;
-        }
+        $desiredKeys = match ($type) {
+            'bbcode' => $isAsciiMathDelimiter ? ['blockAscii', 'inlineAscii'] : ['block', 'inline'],
+            'alias'  => $isAsciiMathDelimiter ? ['aliasBlockAscii', 'aliasInlineAscii'] : ['aliasBlock', 'aliasInline'],
+            default  => $isAsciiMathDelimiter
+                ? ['blockAscii', 'aliasBlockAscii', 'inlineAscii', 'aliasInlineAscii']
+                : ['block', 'inline', 'aliasBlock', 'aliasInline'],
+        };
 
         foreach ($categorizedDelimiters as $key => $delimiterArray) {
-            if (!in_array($key, $desiredKeys)) {
+            if (!\in_array($key, $desiredKeys, true)) {
                 continue;
             }
 
-            $displayMode = in_array($key, ['block', 'blockAscii', 'aliasBlock', 'aliasBlockAscii']);
+            $displayMode = \in_array($key, ['block', 'blockAscii', 'aliasBlock', 'aliasBlockAscii'], true);
 
             foreach ($delimiterArray as $delimiter) {
-                $delimitersWithOptions = array_merge(
+                $delimitersWithOptions = \array_merge(
                     $delimitersWithOptions,
                     $this->_setOptions($delimiter, $displayMode, $isAsciiMathDelimiter)
                 );
             }
 
-            // Render AMS environments even if outside our delimiters.
-            if ($type == 'alias') {
+            if ($type === 'alias') {
                 $environments = ['equation', 'align', 'alignat', 'gather', 'CD'];
 
                 foreach ($environments as $environment) {
-                    array_push(
-                        $delimitersWithOptions,
-                        [
-                            'left'    => '\\\begin{'.$environment.'}',
-                            'right'   => '\\\end{'.$environment.'}',
-                            'display' => true,
-                            'ascii'   => false,
-                        ]
-                    );
+                    $delimitersWithOptions[] = [
+                        'left'    => '\\\begin{'.$environment.'}',
+                        'right'   => '\\\end{'.$environment.'}',
+                        'display' => true,
+                        'ascii'   => false,
+                    ];
                 }
             }
         }
@@ -185,54 +127,33 @@ class Util
 
     /**
      * Creates delimiter list with options (left, right, display).
-     *
-     * @param string $syntax      The delimiter syntax that
-     *                            also including the expression placeholder.
-     *                            i.e. `[math]%e%[/math]`
-     * @param bool   $displayMode To check whether it's a block or inline delimiter.
-     * @param bool   $asciiMath   To check whether it's an AsciiMath delimiter.
-     *
-     * @return array
      */
     private function _setOptions(string $syntax, bool $displayMode = false, bool $asciiMath = false): array
     {
-        $r = [];
-
-        // left delimiter
         $left = Str::before($syntax, self::EXPRESSION_PLACEHOLDER);
-
-        // right delimiter
         $right = Str::after($syntax, self::EXPRESSION_PLACEHOLDER);
 
-        array_push(
-            $r,
+        return [
             [
                 'left'    => $left,
                 'right'   => $right,
                 'display' => $displayMode,
                 'ascii'   => $asciiMath,
-            ]
-        );
-
-        return $r;
+            ],
+        ];
     }
 
     /**
      * Converts comma seperated list into an array.
-     *
-     * @param string $list The list to be seperated.
-     *
-     * @return array
      */
     private function _commaToArray(string $list): array
     {
         $r = [];
 
         if (!empty($list)) {
-            $r = array_filter(preg_split('/[\s,]+/', trim($list)));
+            $r = \array_filter(\preg_split('/[\s,]+/', \trim($list)) ?: []);
         }
 
-        // remove duplicated values
-        return array_unique($r);
+        return \array_values(\array_unique($r));
     }
 }

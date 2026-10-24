@@ -5,8 +5,10 @@
  * Licensed under the MIT License. See license text at https://github.com/flarum/mentions/blob/master/LICENSE.
  */
 
+import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
-import CommentPost from 'flarum/common/components/CommentPost';
+import CommentPost from 'flarum/forum/components/CommentPost';
+import PostQuoteButton from 'ext:flarum/mentions/forum/fragments/PostQuoteButton';
 
 import copyDelimiters from './utils/katex/copyDelimiters';
 import getPrimaryDelimiters from './utils/katex/getPrimaryDelimiters';
@@ -14,24 +16,15 @@ import selectedText from './utils/mentions/selectedText';
 
 export default function addPostQuoteButton() {
   extend(CommentPost.prototype, 'oncreate', function () {
-    // "flarum-mentions" is required for showing the Quote button.
-    // Main cause of this, the user may not want to use Quote button Flarum-wide.
-    // If they using "flarum-mentions" then they're okay with that button.
-    if (!('flarum-mentions' in flarum.extensions) || !app.forum.attribute('mathren.enable_copy_tex')) return;
-
-    const PostQuoteButton = require('flarum/mentions/fragments/PostQuoteButton');
+    if (!('flarum-mentions' in flarum.extensions) || !app.forum.attribute('mathren.enable_copy_tex') || !PostQuoteButton) return;
 
     const post = this.attrs.post;
-    const delimiters = getPrimaryDelimiters.bind(this, app.forum)();
+    const delimiters = getPrimaryDelimiters(app.forum);
 
     if (post.isHidden() || (app.session.user && !post.discussion().canReply())) return;
 
     const $postBody = this.$('.Post-body');
-
-    // Wrap the quote button in a wrapper element so that we can render
-    // button into it.
     const $container = $('<div class="MathRen-quoteButtonContainer"></div>');
-
     const button = new PostQuoteButton(post);
 
     const handler = function (e) {

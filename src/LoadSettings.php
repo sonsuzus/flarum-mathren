@@ -9,50 +9,37 @@
 
 namespace TheTurk\MathRen;
 
+use Flarum\Api\Schema;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use TheTurk\MathRen\Helpers\Util;
 
 class LoadSettings
 {
-    /**
-     * @var Util
-     */
-    protected $util;
-
-    /**
-     * Gets the settings variables. Called on Object creation.
-     *
-     * @param Util $util Helper util that used by this extension.
-     */
-    public function __construct(Util $util)
-    {
-        $this->util = $util;
+    public function __construct(
+        protected Util $util
+    ) {
     }
 
     /**
      * Get the setting values from the database and make them available in the forum.
      *
-     * @return array
+     * @return array<int, Schema\Field>
      */
     public function __invoke(): array
     {
-        // We will use these "explicit" arrays for fixing the inline Litedown links issue.
-        // All explicit" arrays contains BBCode-type delimiters.
-        // @see https://github.com/s9e/TextFormatter/issues/167#issuecomment-882106642
-        $explicitAsciiDelimiters = $explicitLatexDelimiters = [];
+        $explicitAsciiDelimiters = [];
+        $explicitLatexDelimiters = [];
 
         $allowAsciiMath = \boolval($this->util->get('allow_asciimath'));
-
-        $bbCodeDelimiters = $aliasDelimiters = [];
-        $bbCodeAsciiDelimiters = $aliasAsciiDelimiters = [];
+        $bbCodeAsciiDelimiters = [];
+        $aliasAsciiDelimiters = [];
         $bbCodeLatexDelimiters = $this->util->getDelimitersWithOptions('bbcode');
         $aliasLatexDelimiters = $this->util->getDelimitersWithOptions('alias');
 
         if ($allowAsciiMath) {
             $bbCodeAsciiDelimiters = $this->util->getDelimitersWithOptions('bbcode', true);
             $aliasAsciiDelimiters = $this->util->getDelimitersWithOptions('alias', true);
-
             $bbCodeDelimiters = \array_merge($bbCodeAsciiDelimiters, $bbCodeLatexDelimiters);
             $aliasDelimiters = \array_merge($aliasAsciiDelimiters, $aliasLatexDelimiters);
         } else {
@@ -61,93 +48,74 @@ class LoadSettings
         }
 
         foreach ($bbCodeDelimiters as $delimiter) {
-            $explicitArray = '';
-
-            if ($delimiter['ascii'] === true) {
-                $explicitArray = 'explicitAsciiDelimiters';
-            } else {
-                $explicitArray = 'explicitLatexDelimiters';
-            }
-
-            $$explicitArray[] = [
-                'left'    => Str::before($delimiter['left'], ']').':0'.']',
-                'right'   => Str::before($delimiter['right'], ']').':0'.']',
+            $item = [
+                'left'    => Str::before($delimiter['left'], ']').':0]',
+                'right'   => Str::before($delimiter['right'], ']').':0]',
                 'display' => $delimiter['display'],
                 'ascii'   => $delimiter['ascii'],
             ];
+
+            if ($delimiter['ascii'] === true) {
+                $explicitAsciiDelimiters[] = $item;
+            } else {
+                $explicitLatexDelimiters[] = $item;
+            }
         }
 
-        $explicitDelimiters = $allowAsciiMath ? \array_merge($explicitAsciiDelimiters, $explicitLatexDelimiters) : $explicitLatexDelimiters;
+        $explicitDelimiters = $allowAsciiMath
+            ? \array_merge($explicitAsciiDelimiters, $explicitLatexDelimiters)
+            : $explicitLatexDelimiters;
 
-        $settings = [
-            'mathren.allow_asciimath'       => $allowAsciiMath,
-            'mathren.katex_options'         => $this->util->getKatexOptions(),
-            'mathren.enable_editor_buttons' => \boolval($this->util->get('enable_editor_buttons')),
-            'mathren.aliases_as_primary'    => \boolval($this->util->get('aliases_as_primary')),
-            'mathren.enable_copy_tex'       => \boolval($this->util->get('enable_copy_tex')),
+        $fields = [
+            Schema\Bool::make('mathren.allow_asciimath')
+                ->get(fn () => $allowAsciiMath),
+            Schema\Arr::make('mathren.katex_options')
+                ->get(fn () => $this->util->getKatexOptions()),
+            Schema\Bool::make('mathren.enable_editor_buttons')
+                ->get(fn () => \boolval($this->util->get('enable_editor_buttons'))),
+            Schema\Bool::make('mathren.aliases_as_primary')
+                ->get(fn () => \boolval($this->util->get('aliases_as_primary'))),
+            Schema\Bool::make('mathren.enable_copy_tex')
+                ->get(fn () => \boolval($this->util->get('enable_copy_tex'))),
 
-            // Get type-specific delimiters.
-            'mathren.bbcode_delimiters'          => $bbCodeDelimiters,
-            'mathren.alias_delimiters'           => $aliasDelimiters,
-            'mathren.explicit_bbcode_delimiters' => $explicitDelimiters,
+            Schema\Arr::make('mathren.bbcode_delimiters')
+                ->get(fn () => $bbCodeDelimiters),
+            Schema\Arr::make('mathren.alias_delimiters')
+                ->get(fn () => $aliasDelimiters),
+            Schema\Arr::make('mathren.explicit_bbcode_delimiters')
+                ->get(fn () => $explicitDelimiters),
 
-            // Set primary delimiters.
-            // These will be the first delimiters those declared in delimiters list.
-            'mathren.primary_block_delimiter' => Arr::first(
-                $explicitLatexDelimiters,
-                function ($val) {
-                    return $val['display'] === true;
-                }
-            ),
-            'mathren.primary_inline_delimiter' => Arr::first(
-                $explicitLatexDelimiters,
-                function ($val) {
-                    return $val['display'] === false;
-                }
-            ),
-            'mathren.primary_block_delimiter_alias' => Arr::first(
-                $aliasLatexDelimiters,
-                function ($val) {
-                    return $val['display'] === true;
-                }
-            ),
-            'mathren.primary_inline_delimiter_alias' => Arr::first(
-                $aliasLatexDelimiters,
-                function ($val) {
-                    return $val['display'] === false;
-                }
-            ),
+            Schema\Arr::make('mathren.primary_block_delimiter')
+                ->nullable()
+                ->get(fn () => Arr::first($explicitLatexDelimiters, fn ($val) => $val['display'] === true)),
+            Schema\Arr::make('mathren.primary_inline_delimiter')
+                ->nullable()
+                ->get(fn () => Arr::first($explicitLatexDelimiters, fn ($val) => $val['display'] === false)),
+            Schema\Arr::make('mathren.primary_block_delimiter_alias')
+                ->nullable()
+                ->get(fn () => Arr::first($aliasLatexDelimiters, fn ($val) => $val['display'] === true)),
+            Schema\Arr::make('mathren.primary_inline_delimiter_alias')
+                ->nullable()
+                ->get(fn () => Arr::first($aliasLatexDelimiters, fn ($val) => $val['display'] === false)),
         ];
 
         if ($allowAsciiMath) {
-            $settings = \array_merge($settings, [
-                'mathren.primary_block_asciimath_delimiter' => Arr::first(
-                    $explicitAsciiDelimiters,
-                    function ($val) {
-                        return $val['display'] === true;
-                    }
-                ),
-                'mathren.primary_inline_asciimath_delimiter' => Arr::first(
-                    $explicitAsciiDelimiters,
-                    function ($val) {
-                        return $val['display'] === false;
-                    }
-                ),
-                'mathren.primary_block_asciimath_delimiter_alias' => Arr::first(
-                    $aliasAsciiDelimiters,
-                    function ($val) {
-                        return $val['display'] === true;
-                    }
-                ),
-                'mathren.primary_inline_asciimath_delimiter_alias' => Arr::first(
-                    $aliasAsciiDelimiters,
-                    function ($val) {
-                        return $val['display'] === false;
-                    }
-                ),
+            $fields = \array_merge($fields, [
+                Schema\Arr::make('mathren.primary_block_asciimath_delimiter')
+                    ->nullable()
+                    ->get(fn () => Arr::first($explicitAsciiDelimiters, fn ($val) => $val['display'] === true)),
+                Schema\Arr::make('mathren.primary_inline_asciimath_delimiter')
+                    ->nullable()
+                    ->get(fn () => Arr::first($explicitAsciiDelimiters, fn ($val) => $val['display'] === false)),
+                Schema\Arr::make('mathren.primary_block_asciimath_delimiter_alias')
+                    ->nullable()
+                    ->get(fn () => Arr::first($aliasAsciiDelimiters, fn ($val) => $val['display'] === true)),
+                Schema\Arr::make('mathren.primary_inline_asciimath_delimiter_alias')
+                    ->nullable()
+                    ->get(fn () => Arr::first($aliasAsciiDelimiters, fn ($val) => $val['display'] === false)),
             ]);
         }
 
-        return $settings;
+        return $fields;
     }
 }

@@ -5,33 +5,31 @@
  * file that was distributed with this source code.
  */
 
-import app from 'flarum/common/app';
-
+import app from 'flarum/forum/app';
 import Button from 'flarum/common/components/Button';
 import Component from 'flarum/common/Component';
 import Dropdown from 'flarum/common/components/Dropdown';
 import Separator from 'flarum/common/components/Separator';
 import ItemList from 'flarum/common/utils/ItemList';
-import icon from 'flarum/common/helpers/icon';
+import Icon from 'flarum/common/components/Icon';
 
 import getPrimaryDelimiters from '../utils/katex/getPrimaryDelimiters';
 import getFlarumComposers from '../utils/getFlarumComposers';
 
 export default class TextEditorButton extends Component {
   oninit(vnode) {
-    this.isAsciiMath = false;
-
     super.oninit(vnode);
+    this.isAsciiMath = false;
   }
 
   oncreate(vnode) {
+    super.oncreate(vnode);
+
     $(vnode.dom)
       .find('label.checkbox')
       .on('click', function (e) {
         e.stopPropagation();
       });
-
-    super.oncreate(vnode);
   }
 
   view() {
@@ -39,17 +37,12 @@ export default class TextEditorButton extends Component {
       {
         className: 'MathRen-buttonsDropdown',
         buttonClassName: 'Button Button--flat',
-        label: icon('fas fa-square-root-alt'),
+        label: <Icon name="fas fa-square-root-alt" />,
       },
       this.items().toArray()
     );
   }
 
-  /**
-   * Build an item list for the contents of the dropdown menu.
-   *
-   * @return {ItemList}
-   */
   items() {
     const items = new ItemList();
 
@@ -100,22 +93,11 @@ export default class TextEditorButton extends Component {
     return items;
   }
 
-  /**
-   * Wrap the current selection with BBCode tags.
-   * If there's no selection, put them around the cursor.
-   *
-   * @param displayMode Whether this button is used for block or inline expressions.
-   */
   wrapSelection(displayMode = false) {
-    const composerClass = app.composer.body.componentClass;
+    const composerClass = app.composer.body?.componentClass;
 
-    // Get primary delimiters based on the `aliases_as_primary` setting.
-    // If this isn't a native Flarum composer (i.e. it created by an extension),
-    // then we will use BBCode delimiters no matter what because we're
-    // replacing alias delimiters on the fly. This causing wrong cursor location.
-    this.delimiters = getPrimaryDelimiters.bind(this, app.forum, getFlarumComposers().indexOf(composerClass) === -1)();
+    this.delimiters = getPrimaryDelimiters(app.forum, getFlarumComposers().indexOf(composerClass) === -1);
 
-    // opening tag (left delimiter)
     const leftDelim = displayMode
       ? this.isAsciiMath
         ? this.delimiters.block_asciimath['left']
@@ -124,7 +106,6 @@ export default class TextEditorButton extends Component {
       ? this.delimiters.inline_asciimath['left']
       : this.delimiters.inline['left'];
 
-    // closing tag (right delimiter)
     const rightDelim = displayMode
       ? this.isAsciiMath
         ? this.delimiters.block_asciimath['right']
@@ -135,7 +116,7 @@ export default class TextEditorButton extends Component {
 
     const selectionRange = this.attrs.textEditor.getSelectionRange();
 
-    if (selectionRange[0] != selectionRange[1]) {
+    if (selectionRange[0] !== selectionRange[1]) {
       this.attrs.textEditor.insertAt(selectionRange[0], leftDelim);
       this.attrs.textEditor.insertAt(selectionRange[1] + leftDelim.length, rightDelim);
     } else {

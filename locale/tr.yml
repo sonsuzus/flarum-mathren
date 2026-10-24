@@ -1,11 +1,5 @@
 the-turk-mathren:
-  ##
-  # UNIQUE KEYS - The following keys are used in only one location each.
-  ##
-
-  # Translations in this namespace are used by the admin interface.
   admin:
-    # These translations are used in the Settings page.
     settings:
       katex_options_heading: KaTeX Seçenekleri
       delimiters_label: Sınırlayıcılar
@@ -14,9 +8,13 @@ the-turk-mathren:
       inline_delimiters_text: Satır içindeki ifadeler için <strong>BBCode</strong> sınırlayıcıları
       alias_block_delimiters_text: Blok ifadeler için <strong>özel</strong> sınırlayıcılar
       alias_inline_delimiters_text: Satır içindeki ifadeler için <strong>özel</strong> sınırlayıcılar
+      block_asciimath_delimiters_text: Blok AsciiMath ifadeleri için <strong>BBCode</strong> sınırlayıcıları
+      inline_asciimath_delimiters_text: Satır içi AsciiMath ifadeleri için <strong>BBCode</strong> sınırlayıcıları
+      alias_block_asciimath_delimiters_text: Blok AsciiMath ifadeleri için <strong>özel</strong> sınırlayıcılar
+      alias_inline_asciimath_delimiters_text: Satır içi AsciiMath ifadeleri için <strong>özel</strong> sınırlayıcılar
       primary_delimiters_text: Yukarıda bulunan listelerdeki ilk sınırlayıcılar birincil sınırlayıcı olarak kabul edilecektir.
       output_mode_label: Biçimlendirme
-      output_mode_text: Matematik ifadelerin gösterilmesinde kullanılacak biçimlendirme dilini seçin.
+      output_mode_text: Matematik ifadelerin gösterilmesinde kullanılacak biçimlendirme dilini seçin
       error_color_label: Hatalı komutu renklendir
       error_color_text: Konsola hata mesajı göndermek yerine desteklenmeyen komutu renklendirebilirsiniz.
       sizing_options_heading: Boyutlandırma ayarları
@@ -30,7 +28,7 @@ the-turk-mathren:
       enable_leqno_label: İfade etiketlerini sola yasla (leqno)
       color_is_text_color_label: <code>\color</code> komutunun iki ifade içermesine izin ver (colorIsTextColor)
       throw_on_error_label: Desteklenmeyen komut girildiğinde konsola hata mesajı gönder
-      bbcode_delimiters_rule_text: BBCode sınırlayıcılarını yazarken sadece büyük/küçük harf ve tire kullanabilirsiniz.
+      bbcode_delimiters_rule_text: BBCode sınırlayıcıları yazarken sadece büyük/küçük harf ve tire kullanabilirsiniz.
       cdn_options_heading: CDN Seçenekleri
       cdn_katex_text: <strong>KaTeX</strong> için CDN adresi
       sri_katex_text: <strong>KaTeX</strong> için SRI özeti (hash)
@@ -43,10 +41,10 @@ the-turk-mathren:
       enable_copy_tex_label: KaTeX tarafından işlenmiş ifadelerin kaynaklarının kopyalanmasına izin ver
       quote_button_text: Alıntı butonunu kullanabilmek için <code>flarum/mentions</code> eklentisini etkinleştirmelisiniz.
 
-  # Translations in this namespace are used by the forum user interface.
   forum:
-  
-    # These translations are used by the composer.
     composer:
-      block_expression: Block Expression
-      inline_expression: Inline Expression
+      block_expression: Blok İfade
+      block_expression_asciimath: Blok İfade (AsciiMath)
+      inline_expression: Satır İçi İfade
+      inline_expression_asciimath: Satır İçi İfade (AsciiMath)
+      asciimath_only: Sadece AsciiMath
