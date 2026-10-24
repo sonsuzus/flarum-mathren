@@ -23,7 +23,7 @@ return [
 
     new Extend\Locales(__DIR__.'/locale'),
 
-    (new Extend\ApiResourceFields(ForumResource::class))
+    (new Extend\ApiResource(ForumResource::class))
         ->fields(LoadSettings::class),
 
     (new Extend\Formatter())

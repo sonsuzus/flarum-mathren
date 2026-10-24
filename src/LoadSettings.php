@@ -9,6 +9,7 @@
 
 namespace TheTurk\MathRen;
 
+use Flarum\Api\Context;
 use Flarum\Api\Schema;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -24,9 +25,10 @@ class LoadSettings
     /**
      * Get the setting values from the database and make them available in the forum.
      *
+     * @param Context $context
      * @return array<int, Schema\Field>
      */
-    public function __invoke(): array
+    public function __invoke(Context $context): array
     {
         $explicitAsciiDelimiters = [];
         $explicitLatexDelimiters = [];
