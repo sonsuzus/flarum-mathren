@@ -6,11 +6,8 @@
  */
 
 const findEndOfMath = function (delimiter, text, startIndex) {
-  // Adapted from
-  // https://github.com/Khan/perseus/blob/master/src/perseus-markdown.jsx
   let index = startIndex;
   let braceLevel = 0;
-
   const delimLength = delimiter.length;
 
   while (index < text.length) {
@@ -42,6 +39,11 @@ const splitAtDelimiters = function (text, delimiters) {
   let index;
   const data = [];
 
+  // HATA ÇÖZÜMÜ: Eğer delimiter dizisi boş ise veya tanımsızsa işlemi direkt metin olarak sonlandır.
+  if (!delimiters || !Array.isArray(delimiters) || delimiters.length === 0) {
+    return [{ type: 'text', data: text }];
+  }
+
   const regexLeft = new RegExp('(' + delimiters.map((x) => escapeRegex(x.left)).join('|') + ')');
 
   while (true) {
@@ -56,14 +58,23 @@ const splitAtDelimiters = function (text, delimiters) {
       });
       text = text.slice(index); // now text starts with delimiter
     }
+    
     // ... so this always succeeds:
     const i = delimiters.findIndex((delim) => text.startsWith(delim.left));
+    
+    // Hata önleme: Eğer eşleşme bulunamazsa sonsuz döngüyü kır
+    if (i === -1) {
+      break;
+    }
+
     index = findEndOfMath(delimiters[i].right, text, delimiters[i].left.length);
     if (index === -1) {
       break;
     }
+    
     const rawData = text.slice(0, index + delimiters[i].right.length);
     const math = amsRegex.test(rawData) ? rawData : text.slice(delimiters[i].left.length, index);
+    
     data.push({
       type: 'math',
       data: math,
@@ -71,6 +82,7 @@ const splitAtDelimiters = function (text, delimiters) {
       display: delimiters[i].display,
       ascii: delimiters[i].ascii,
     });
+    
     text = text.slice(index + delimiters[i].right.length);
   }
 
