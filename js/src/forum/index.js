@@ -40,16 +40,19 @@ app.initializers.add(
     };
 
     const delimiterReplacerOptions = (reverse = false) => {
-      const primaryDelimiters = getPrimaryDelimiters(app.forum, !reverse);
-      const bbDelimiters = app.forum.attribute('mathren.bbcode_delimiters');
-      const explicitBBDelimiters = app.forum.attribute('mathren.explicit_bbcode_delimiters');
-      const aliasDelimiters = app.forum.attribute('mathren.alias_delimiters');
+      const primaryDelimiters = getPrimaryDelimiters(app.forum, !reverse) || {};
+      
+      // Tanımsız değerlere karşı boş dizi `[]` koruması eklendi
+      const bbDelimiters = app.forum.attribute('mathren.bbcode_delimiters') || [];
+      const explicitBBDelimiters = app.forum.attribute('mathren.explicit_bbcode_delimiters') || [];
+      const aliasDelimiters = app.forum.attribute('mathren.alias_delimiters') || [];
+      
       const splitAtDelimiters = reverse ? bbDelimiters.concat(explicitBBDelimiters) : aliasDelimiters;
 
       let options = {
         primaryBlockDelimiter: primaryDelimiters.block,
         primaryInlineDelimiter: primaryDelimiters.inline,
-        splitAtDelimiters,
+        splitAtDelimiters: splitAtDelimiters || [],
       };
 
       if (app.forum.attribute('mathren.allow_asciimath')) {
