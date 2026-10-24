@@ -6,7 +6,6 @@
  */
 
 import DiscussionComposer from 'flarum/forum/components/DiscussionComposer';
-import EditPostComposer from 'flarum/forum/components/EditPostComposer';
 import ReplyComposer from 'flarum/forum/components/ReplyComposer';
 
 /**
@@ -17,5 +16,8 @@ import ReplyComposer from 'flarum/forum/components/ReplyComposer';
  * @return { Array }
  */
 export default function getFlarumComposers() {
-  return [DiscussionComposer, EditPostComposer, ReplyComposer];
+  return [
+    DiscussionComposer, 
+    ReplyComposer
+  ].filter(Boolean);
 }

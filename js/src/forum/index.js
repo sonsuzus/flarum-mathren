@@ -74,17 +74,21 @@ app.initializers.add(
     }
 
     getFlarumComposers().forEach((composer) => {
+      if (!composer) return; // Eksik Flarum 2.0 bileşenlerine karşı koruma
+      
       override(composer.prototype, 'onsubmit', function (original) {
-        this.composer.fields.content(replaceDelimiters(this.composer.fields.content()));
-        original();
+        if (this.composer && this.composer.fields) {
+          this.composer.fields.content(replaceDelimiters(this.composer.fields.content()));
+        }
+        return original();
       });
     });
 
     extend(TextEditor.prototype, 'oncreate', function (original, vnode) {
       const $textarea = vnode.dom.querySelector('textarea');
-      if (!$textarea || !app.composer.body) return;
+      if (!$textarea || !app.composer || !app.composer.body) return;
 
-      const composerClass = app.composer.body.componentClass;
+      const composerClass = app.composer.body.componentClass || app.composer.body.constructor;
 
       if (getFlarumComposers().indexOf(composerClass) === -1) {
         $textarea.addEventListener('input', function () {
@@ -96,5 +100,5 @@ app.initializers.add(
       }
     });
   },
-  -500
+  -500 // since we're overriding things...
 );
