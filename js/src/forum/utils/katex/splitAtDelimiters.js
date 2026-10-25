@@ -30,21 +30,27 @@ const findEndOfMath = function (delimiter, text, startIndex) {
 };
 
 const escapeRegex = function (string) {
-  return string.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  return String(string).replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 };
 
 const amsRegex = /^\\begin{/;
 
-const splitAtDelimiters = function (text, delimiters) {
-  let index;
-  const data = [];
+export default function splitAtDelimiters(text, delimiters = []) {
+  if (typeof text !== 'string' || text === '') {
+    return [{ type: 'text', data: text || '' }];
+  }
 
-  // HATA ÇÖZÜMÜ: Eğer delimiter dizisi boş ise veya tanımsızsa işlemi direkt metin olarak sonlandır.
-  if (!delimiters || !Array.isArray(delimiters) || delimiters.length === 0) {
+  const safeDelimiters = (Array.isArray(delimiters) ? delimiters : []).filter(
+    (d) => d && typeof d.left === 'string' && d.left.length > 0 && typeof d.right === 'string' && d.right.length > 0
+  );
+
+  if (safeDelimiters.length === 0) {
     return [{ type: 'text', data: text }];
   }
 
-  const regexLeft = new RegExp('(' + delimiters.map((x) => escapeRegex(x.left)).join('|') + ')');
+  let index;
+  const data = [];
+  const regexLeft = new RegExp('(' + safeDelimiters.map((x) => escapeRegex(x.left)).join('|') + ')');
 
   while (true) {
     index = text.search(regexLeft);
@@ -56,34 +62,31 @@ const splitAtDelimiters = function (text, delimiters) {
         type: 'text',
         data: text.slice(0, index),
       });
-      text = text.slice(index); // now text starts with delimiter
+      text = text.slice(index);
     }
-    
-    // ... so this always succeeds:
-    const i = delimiters.findIndex((delim) => text.startsWith(delim.left));
-    
-    // Hata önleme: Eğer eşleşme bulunamazsa sonsuz döngüyü kır
+
+    const i = safeDelimiters.findIndex((delim) => text.startsWith(delim.left));
     if (i === -1) {
       break;
     }
 
-    index = findEndOfMath(delimiters[i].right, text, delimiters[i].left.length);
+    index = findEndOfMath(safeDelimiters[i].right, text, safeDelimiters[i].left.length);
     if (index === -1) {
       break;
     }
-    
-    const rawData = text.slice(0, index + delimiters[i].right.length);
-    const math = amsRegex.test(rawData) ? rawData : text.slice(delimiters[i].left.length, index);
-    
+
+    const rawData = text.slice(0, index + safeDelimiters[i].right.length);
+    const math = amsRegex.test(rawData) ? rawData : text.slice(safeDelimiters[i].left.length, index);
+
     data.push({
       type: 'math',
       data: math,
       rawData,
-      display: delimiters[i].display,
-      ascii: delimiters[i].ascii,
+      display: safeDelimiters[i].display,
+      ascii: safeDelimiters[i].ascii,
     });
-    
-    text = text.slice(index + delimiters[i].right.length);
+
+    text = text.slice(index + safeDelimiters[i].right.length);
   }
 
   if (text !== '') {
@@ -94,6 +97,4 @@ const splitAtDelimiters = function (text, delimiters) {
   }
 
   return data;
-};
-
-export default splitAtDelimiters;
+}

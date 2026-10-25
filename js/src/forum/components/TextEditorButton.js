@@ -70,7 +70,7 @@ export default class TextEditorButton extends Component {
       0
     );
 
-    if (app.forum.attribute('mathren.allow_asciimath')) {
+    if (app.forum?.attribute('mathren.allow_asciimath')) {
       items.add('mathren-separator', Separator.component());
 
       items.add(
@@ -94,34 +94,36 @@ export default class TextEditorButton extends Component {
   }
 
   wrapSelection(displayMode = false) {
-    const composerClass = app.composer.body?.componentClass;
+    const composerClass = app.composer?.body?.componentClass || app.composer?.body?.constructor;
+    const loadedComposers = getFlarumComposers(true);
+    const isNativeComposer = loadedComposers.some(
+      (Composer) => composerClass === Composer || (typeof Composer === 'function' && composerClass?.prototype instanceof Composer)
+    );
 
-    this.delimiters = getPrimaryDelimiters(app.forum, getFlarumComposers().indexOf(composerClass) === -1);
+    this.delimiters = getPrimaryDelimiters(app.forum, !isNativeComposer);
 
-    const leftDelim = displayMode
+    const targetDelim = displayMode
       ? this.isAsciiMath
-        ? this.delimiters.block_asciimath['left']
-        : this.delimiters.block['left']
+        ? this.delimiters.block_asciimath
+        : this.delimiters.block
       : this.isAsciiMath
-      ? this.delimiters.inline_asciimath['left']
-      : this.delimiters.inline['left'];
+        ? this.delimiters.inline_asciimath
+        : this.delimiters.inline;
 
-    const rightDelim = displayMode
-      ? this.isAsciiMath
-        ? this.delimiters.block_asciimath['right']
-        : this.delimiters.block['right']
-      : this.isAsciiMath
-      ? this.delimiters.inline_asciimath['right']
-      : this.delimiters.inline['right'];
+    const leftDelim = targetDelim?.left || '';
+    const rightDelim = targetDelim?.right || '';
 
-    const selectionRange = this.attrs.textEditor.getSelectionRange();
+    const editor = this.attrs?.textEditor;
+    if (!editor) return;
+
+    const selectionRange = editor.getSelectionRange();
 
     if (selectionRange[0] !== selectionRange[1]) {
-      this.attrs.textEditor.insertAt(selectionRange[0], leftDelim);
-      this.attrs.textEditor.insertAt(selectionRange[1] + leftDelim.length, rightDelim);
+      editor.insertAt(selectionRange[0], leftDelim);
+      editor.insertAt(selectionRange[1] + leftDelim.length, rightDelim);
     } else {
-      this.attrs.textEditor.replaceBeforeCursor(selectionRange[0], leftDelim + rightDelim);
-      this.attrs.textEditor.moveCursorTo(selectionRange[0] + leftDelim.length);
+      editor.replaceBeforeCursor(selectionRange[0], leftDelim + rightDelim);
+      editor.moveCursorTo(selectionRange[0] + leftDelim.length);
     }
   }
 }

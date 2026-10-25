@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of MathRen.
  *
@@ -14,9 +16,58 @@ use Illuminate\Support\Str;
 
 class Util
 {
+    public const PREFIX = 'the-turk-mathren.';
     public const EXPRESSION_PLACEHOLDER = '%e%';
 
-    protected string $prefix = 'the-turk-mathren.';
+    /**
+     * Default extension settings (without prefix).
+     *
+     * @var array<string, string>
+     */
+    public const DEFAULTS = [
+        'alias_block_delimiters'            => '$$%e%$$, \[%e%\]',
+        'alias_inline_delimiters'           => '\(%e%\)',
+        'block_delimiters'                  => '[math]%e%[/math]',
+        'inline_delimiters'                 => '[imath]%e%[/imath]',
+        'alias_block_asciimath_delimiters'  => '\$%e%\$',
+        'alias_inline_asciimath_delimiters' => '\{%e%\}',
+        'block_asciimath_delimiters'        => '[asmath]%e%[/asmath]',
+        'inline_asciimath_delimiters'       => '[iasmath]%e%[/iasmath]',
+        'color_is_text_color'               => '0',
+        'enable_copy_tex'                   => '1',
+        'enable_fleqn'                      => '0',
+        'enable_leqno'                      => '0',
+        'enable_editor_buttons'             => '1',
+        'throw_on_error'                    => '0',
+        'error_color'                       => '#cc0000',
+        'macros'                            => '',
+        'max_expand'                        => '1000',
+        'max_size'                          => '10',
+        'min_rule_thickness'                => '0.05',
+        'output_mode'                       => 'htmlAndMathml',
+        'aliases_as_primary'                => '1',
+        'allow_asciimath'                   => '0',
+        'cdn_katex'                         => 'https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js',
+        'sri_katex'                         => 'sha384-X/XCfMm41VSsqRNQgDerQczD69XqmjOOOwYQvr/uuC+j4OPoNhVgjdGFwhvN02Ja',
+        'cdn_asciimath2tex'                 => 'https://unpkg.com/asciimath2tex@1.4.0/dist/asciimath2tex.umd.js',
+        'sri_asciimath2tex'                 => 'sha384-cdvLGvItf6Jz+kIS7cNq6cThfMF6hSoUveHAZJBnJqmEosxD2lUHn2/pUmGKGybo',
+    ];
+
+    /**
+     * Fallback primary delimiters by category key.
+     *
+     * @var array<string, array{left: string, right: string, display: bool, ascii: bool}>
+     */
+    private const FALLBACK_PRIMARY_DELIMITERS = [
+        'block'            => ['left' => '[math]', 'right' => '[/math]', 'display' => true, 'ascii' => false],
+        'inline'           => ['left' => '[imath]', 'right' => '[/imath]', 'display' => false, 'ascii' => false],
+        'blockAscii'       => ['left' => '[asmath]', 'right' => '[/asmath]', 'display' => true, 'ascii' => true],
+        'inlineAscii'      => ['left' => '[iasmath]', 'right' => '[/iasmath]', 'display' => false, 'ascii' => true],
+        'aliasBlock'       => ['left' => '$$', 'right' => '$$', 'display' => true, 'ascii' => false],
+        'aliasInline'      => ['left' => '\(', 'right' => '\)', 'display' => false, 'ascii' => false],
+        'aliasBlockAscii'  => ['left' => '\$', 'right' => '\$', 'display' => true, 'ascii' => true],
+        'aliasInlineAscii' => ['left' => '\{', 'right' => '\}', 'display' => false, 'ascii' => true],
+    ];
 
     public function __construct(
         protected SettingsRepositoryInterface $settings
@@ -24,34 +75,53 @@ class Util
     }
 
     /**
-     * This method will make prefixed calls easier.
+     * Retrieve a setting value with automatic fallback to extension defaults.
      */
-    public function get(string $key, string $default = ''): string
+    public function get(string $key, ?string $default = null): string
     {
-        return (string) ($this->settings->get($this->prefix.$key, $default) ?? $default);
+        $fallback = $default ?? (self::DEFAULTS[$key] ?? '');
+        $value = $this->settings->get(self::PREFIX.$key);
+
+        if ($value === null || ($value === '' && $key !== 'macros' && isset(self::DEFAULTS[$key]))) {
+            return (string) $fallback;
+        }
+
+        return (string) $value;
     }
 
     /**
-     * KaTeX options those to be used through this extension.
+     * Retrieve a boolean setting value safely.
+     */
+    public function getBool(string $key): bool
+    {
+        return \filter_var($this->get($key), \FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * KaTeX options to be used throughout the extension.
+     *
+     * @return array<string, mixed>
      */
     public function getKatexOptions(): array
     {
         return [
-            'fleqn'            => \boolval($this->get('enable_fleqn')),
-            'leqno'            => \boolval($this->get('enable_leqno')),
+            'fleqn'            => $this->getBool('enable_fleqn'),
+            'leqno'            => $this->getBool('enable_leqno'),
             'output'           => $this->get('output_mode'),
-            'throwOnError'     => \boolval($this->get('throw_on_error')),
+            'throwOnError'     => $this->getBool('throw_on_error'),
             'errorColor'       => $this->get('error_color'),
-            'minRuleThickness' => \floatval($this->get('min_rule_thickness')),
-            'maxSize'          => \floatval($this->get('max_size')),
-            'maxExpand'        => \intval($this->get('max_expand')),
-            'macros'           => \json_decode('{'.$this->get('macros').'}'),
-            'colorIsTextColor' => \boolval($this->get('color_is_text_color')),
+            'minRuleThickness' => (float) $this->get('min_rule_thickness'),
+            'maxSize'          => (float) $this->get('max_size'),
+            'maxExpand'        => (int) $this->get('max_expand'),
+            'macros'           => $this->parseMacros(),
+            'colorIsTextColor' => $this->getBool('color_is_text_color'),
         ];
     }
 
     /**
-     * Create a classes array that will be used to wrap expressions.
+     * CSS classes used to wrap rendered math expressions.
+     *
+     * @return array{block: string, inline: string}
      */
     public function getClasses(): array
     {
@@ -62,28 +132,56 @@ class Util
     }
 
     /**
-     * Create a delimiters array that categorized by their type.
+     * Get the full list of delimiters for the Forum API (`bbcode` or `alias`),
+     * automatically merging AsciiMath delimiters when `allow_asciimath` is enabled.
+     *
+     * @return list<array{left: string, right: string, display: bool, ascii: bool}>
      */
-    private function _getDelimitersByType(): array
+    public function getForumDelimiters(string $type): array
     {
-        return [
-            'block'            => $this->_commaToArray($this->get('block_delimiters')),
-            'blockAscii'       => $this->_commaToArray($this->get('block_asciimath_delimiters')),
-            'inline'           => $this->_commaToArray($this->get('inline_delimiters')),
-            'inlineAscii'      => $this->_commaToArray($this->get('inline_asciimath_delimiters')),
-            'aliasBlock'       => $this->_commaToArray($this->get('alias_block_delimiters')),
-            'aliasBlockAscii'  => $this->_commaToArray($this->get('alias_block_asciimath_delimiters')),
-            'aliasInline'      => $this->_commaToArray($this->get('alias_inline_delimiters')),
-            'aliasInlineAscii' => $this->_commaToArray($this->get('alias_inline_asciimath_delimiters')),
-        ];
+        $delimiters = $this->getDelimitersWithOptions($type, false);
+
+        if ($this->getBool('allow_asciimath')) {
+            $delimiters = \array_merge(
+                $delimiters,
+                $this->getDelimitersWithOptions($type, true)
+            );
+        }
+
+        return \array_values($delimiters);
     }
 
     /**
-     * This function creates an array of delimiters to be used in various places.
+     * Get the primary (first) delimiter object for a specific delimiter category.
+     *
+     * @return array{left: string, right: string, display: bool, ascii: bool}
+     */
+    public function getPrimaryDelimiter(string $categoryKey): array
+    {
+        $categorized = $this->getDelimitersByType();
+        $list = $categorized[$categoryKey] ?? [];
+
+        $displayMode = \in_array($categoryKey, ['block', 'blockAscii', 'aliasBlock', 'aliasBlockAscii'], true);
+        $asciiMath = \in_array($categoryKey, ['blockAscii', 'inlineAscii', 'aliasBlockAscii', 'aliasInlineAscii'], true);
+
+        foreach ($list as $syntax) {
+            $parsed = $this->setOptions($syntax, $displayMode, $asciiMath);
+            if (!empty($parsed[0])) {
+                return $parsed[0];
+            }
+        }
+
+        return self::FALLBACK_PRIMARY_DELIMITERS[$categoryKey] ?? self::FALLBACK_PRIMARY_DELIMITERS['inline'];
+    }
+
+    /**
+     * Create an array of delimiters with options (`left`, `right`, `display`, `ascii`).
+     *
+     * @return list<array{left: string, right: string, display: bool, ascii: bool}>
      */
     public function getDelimitersWithOptions(string $type = '', bool $isAsciiMathDelimiter = false): array
     {
-        $categorizedDelimiters = $this->_getDelimitersByType();
+        $categorizedDelimiters = $this->getDelimitersByType();
         $delimitersWithOptions = [];
 
         $desiredKeys = match ($type) {
@@ -104,34 +202,63 @@ class Util
             foreach ($delimiterArray as $delimiter) {
                 $delimitersWithOptions = \array_merge(
                     $delimitersWithOptions,
-                    $this->_setOptions($delimiter, $displayMode, $isAsciiMathDelimiter)
+                    $this->setOptions($delimiter, $displayMode, $isAsciiMathDelimiter)
                 );
-            }
-
-            if ($type === 'alias') {
-                $environments = ['equation', 'align', 'alignat', 'gather', 'CD'];
-
-                foreach ($environments as $environment) {
-                    $delimitersWithOptions[] = [
-                        'left'    => '\\\begin{'.$environment.'}',
-                        'right'   => '\\\end{'.$environment.'}',
-                        'display' => true,
-                        'ascii'   => false,
-                    ];
-                }
             }
         }
 
-        return $delimitersWithOptions;
+        if ($type === 'alias' && !$isAsciiMathDelimiter) {
+            $environments = ['equation', 'align', 'alignat', 'gather', 'CD'];
+
+            foreach ($environments as $environment) {
+                $delimitersWithOptions[] = [
+                    'left'    => '\\begin{'.$environment.'}',
+                    'right'   => '\\end{'.$environment.'}',
+                    'display' => true,
+                    'ascii'   => false,
+                ];
+            }
+        }
+
+        return \array_values($delimitersWithOptions);
     }
 
     /**
-     * Creates delimiter list with options (left, right, display).
+     * Categorize raw delimiter lists by their type.
+     *
+     * @return array<string, list<string>>
      */
-    private function _setOptions(string $syntax, bool $displayMode = false, bool $asciiMath = false): array
+    private function getDelimitersByType(): array
     {
+        return [
+            'block'            => $this->commaToArray($this->get('block_delimiters')),
+            'blockAscii'       => $this->commaToArray($this->get('block_asciimath_delimiters')),
+            'inline'           => $this->commaToArray($this->get('inline_delimiters')),
+            'inlineAscii'      => $this->commaToArray($this->get('inline_asciimath_delimiters')),
+            'aliasBlock'       => $this->commaToArray($this->get('alias_block_delimiters')),
+            'aliasBlockAscii'  => $this->commaToArray($this->get('alias_block_asciimath_delimiters')),
+            'aliasInline'      => $this->commaToArray($this->get('alias_inline_delimiters')),
+            'aliasInlineAscii' => $this->commaToArray($this->get('alias_inline_asciimath_delimiters')),
+        ];
+    }
+
+    /**
+     * Parse a single delimiter syntax string (`left%e%right`) into an option entry.
+     *
+     * @return list<array{left: string, right: string, display: bool, ascii: bool}>
+     */
+    private function setOptions(string $syntax, bool $displayMode = false, bool $asciiMath = false): array
+    {
+        if (!\str_contains($syntax, self::EXPRESSION_PLACEHOLDER)) {
+            return [];
+        }
+
         $left = Str::before($syntax, self::EXPRESSION_PLACEHOLDER);
         $right = Str::after($syntax, self::EXPRESSION_PLACEHOLDER);
+
+        if ($left === '' || $right === '') {
+            return [];
+        }
 
         return [
             [
@@ -144,16 +271,35 @@ class Util
     }
 
     /**
-     * Converts comma seperated list into an array.
+     * Convert a comma/whitespace-separated delimiter string into a unique list.
+     *
+     * @return list<string>
      */
-    private function _commaToArray(string $list): array
+    private function commaToArray(string $list): array
     {
-        $r = [];
-
-        if (!empty($list)) {
-            $r = \array_filter(\preg_split('/[\s,]+/', \trim($list)) ?: []);
+        $trimmed = \trim($list);
+        if ($trimmed === '') {
+            return [];
         }
 
-        return \array_values(\array_unique($r));
+        $items = \array_filter(\preg_split('/[\s,]+/', $trimmed) ?: []);
+
+        return \array_values(\array_unique($items));
+    }
+
+    /**
+     * Safely decode custom KaTeX macros into a JSON object.
+     */
+    private function parseMacros(): object
+    {
+        $raw = \trim($this->get('macros'));
+        if ($raw === '') {
+            return new \stdClass();
+        }
+
+        $json = \str_starts_with($raw, '{') ? $raw : '{'.$raw.'}';
+        $decoded = \json_decode($json);
+
+        return \is_object($decoded) ? $decoded : new \stdClass();
     }
 }

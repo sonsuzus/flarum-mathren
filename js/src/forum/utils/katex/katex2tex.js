@@ -6,9 +6,12 @@
  */
 
 // Replace .katex elements with their TeX source (<annotation> element).
-// Modifies fragment in-place.  Useful for writing your own 'copy' handler,
+// Modifies fragment in-place. Useful for writing your own 'copy' handler,
 // as in copy-tex.js.
-export const katexReplaceWithTex = function (fragment, copyDelimiters) {
+export default function katexReplaceWithTex(fragment, copyDelimiters = {}) {
+  const inlineDelims = Array.isArray(copyDelimiters?.inline) && copyDelimiters.inline.length >= 2 ? copyDelimiters.inline : ['[imath]', '[/imath]'];
+  const displayDelims = Array.isArray(copyDelimiters?.display) && copyDelimiters.display.length >= 2 ? copyDelimiters.display : ['[math]', '[/math]'];
+
   // Remove .katex-html blocks that are preceded by .katex-mathml blocks
   // (which will get replaced below).
   const katexHtml = fragment.querySelectorAll('.katex-mathml + .katex-html');
@@ -33,7 +36,7 @@ export const katexReplaceWithTex = function (fragment, copyDelimiters) {
       } else if (element.parentNode) {
         element.parentNode.replaceChild(texSource, element);
       }
-      texSource.innerHTML = copyDelimiters.inline[0] + texSource.innerHTML + copyDelimiters.inline[1];
+      texSource.innerHTML = inlineDelims[0] + texSource.innerHTML + inlineDelims[1];
     }
   }
 
@@ -42,15 +45,10 @@ export const katexReplaceWithTex = function (fragment, copyDelimiters) {
   for (let i = 0; i < displays.length; i++) {
     const element = displays[i];
     element.innerHTML =
-      copyDelimiters.display[0] +
-      element.innerHTML.substr(
-        copyDelimiters.inline[0].length,
-        element.innerHTML.length - copyDelimiters.inline[0].length - copyDelimiters.inline[1].length
-      ) +
-      copyDelimiters.display[1];
+      displayDelims[0] +
+      element.innerHTML.slice(inlineDelims[0].length, element.innerHTML.length - inlineDelims[1].length) +
+      displayDelims[1];
   }
 
   return fragment;
-};
-
-export default katexReplaceWithTex;
+}

@@ -6,13 +6,16 @@
  */
 
 function closestKatex(node) {
-  // If node is a Text Node, for example, go up to containing Element,
+  if (!node) return null;
+  // If node is a Text Node, go up to containing Element,
   // where we can apply the `closest` method.
   const element = node instanceof Element ? node : node.parentElement;
   return element && element.closest('.katex');
 }
 
 export default function setKatexRange(range) {
+  if (!range) return;
+
   // When start point is within a formula, expand to entire formula.
   const startKatex = closestKatex(range.startContainer);
   if (startKatex) {

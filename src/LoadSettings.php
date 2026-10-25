@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of MathRen.
  *
@@ -10,93 +12,69 @@
 namespace TheTurk\MathRen;
 
 use Flarum\Api\Schema;
-use Flarum\Settings\SettingsRepositoryInterface;
+use TheTurk\MathRen\Helpers\Util;
 
 /**
- * MathRen ayarlarını forum API kaynağına (ForumResource) alan olarak ekler.
- *
- * Flarum 2.x'te ApiResource::fields() callback'i argümansız çağrılır
- * ve Schema alanlarından oluşan bir dizi döndürmelidir.
+ * Serializes MathRen settings and parsed delimiter structures into `ForumResource`
+ * using the `mathren.*` attribute names expected by the forum frontend.
  */
 class LoadSettings
 {
-    private const PREFIX = 'the-turk-mathren.';
-
-    /**
-     * Ayar anahtarı (prefix'siz) => tip (string|bool|int|float)
-     */
-    private const SETTINGS = [
-        'alias_block_delimiters' => 'string',
-        'alias_inline_delimiters' => 'string',
-        'block_delimiters' => 'string',
-        'inline_delimiters' => 'string',
-        'alias_block_asciimath_delimiters' => 'string',
-        'alias_inline_asciimath_delimiters' => 'string',
-        'block_asciimath_delimiters' => 'string',
-        'inline_asciimath_delimiters' => 'string',
-        'color_is_text_color' => 'bool',
-        'enable_copy_tex' => 'bool',
-        'enable_fleqn' => 'bool',
-        'enable_leqno' => 'bool',
-        'enable_editor_buttons' => 'bool',
-        'throw_on_error' => 'bool',
-        'error_color' => 'string',
-        'max_expand' => 'int',
-        'max_size' => 'float',
-        'min_rule_thickness' => 'float',
-        'output_mode' => 'string',
-        'aliases_as_primary' => 'bool',
-        'allow_asciimath' => 'bool',
-        'cdn_katex' => 'string',
-        'sri_katex' => 'string',
-        'cdn_asciimath2tex' => 'string',
-        'sri_asciimath2tex' => 'string',
-    ];
-
     public function __construct(
-        private readonly SettingsRepositoryInterface $settings
+        protected Util $util
     ) {
     }
 
+    /**
+     * @return list<Schema\Attribute>
+     */
     public function __invoke(): array
     {
-        $fields = [];
+        return [
+            Schema\Boolean::make('mathren.enable_editor_buttons')
+                ->get(fn (): bool => $this->util->getBool('enable_editor_buttons')),
 
-        foreach (self::SETTINGS as $key => $type) {
-            $fields[] = $this->makeField($type, $this->attributeName($key))
-                ->get(fn () => $this->readValue($key, $type));
-        }
+            Schema\Boolean::make('mathren.allow_asciimath')
+                ->get(fn (): bool => $this->util->getBool('allow_asciimath')),
 
-        return $fields;
-    }
+            Schema\Boolean::make('mathren.aliases_as_primary')
+                ->get(fn (): bool => $this->util->getBool('aliases_as_primary')),
 
-    /**
-     * JS tarafında app.forum.attribute('...') ile okunacak ad.
-     * Frontend kodun hangi adı bekliyorsa burayı ona göre uyarla.
-     */
-    private function attributeName(string $key): string
-    {
-        return self::PREFIX.$key;
-    }
+            Schema\Boolean::make('mathren.enable_copy_tex')
+                ->get(fn (): bool => $this->util->getBool('enable_copy_tex')),
 
-    private function makeField(string $type, string $name)
-    {
-        return match ($type) {
-            'bool' => Schema\Boolean::make($name),
-            'int', 'float' => Schema\Number::make($name),
-            default => Schema\Str::make($name),
-        };
-    }
+            Schema\Arr::make('mathren.bbcode_delimiters')
+                ->get(fn (): array => $this->util->getForumDelimiters('bbcode')),
 
-    private function readValue(string $key, string $type): bool|int|float|string
-    {
-        $value = $this->settings->get(self::PREFIX.$key);
+            Schema\Arr::make('mathren.explicit_bbcode_delimiters')
+                ->get(fn (): array => []),
 
-        return match ($type) {
-            'bool' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
-            'int' => (int) $value,
-            'float' => (float) $value,
-            default => (string) $value,
-        };
+            Schema\Arr::make('mathren.alias_delimiters')
+                ->get(fn (): array => $this->util->getForumDelimiters('alias')),
+
+            Schema\Arr::make('mathren.primary_block_delimiter')
+                ->get(fn (): array => $this->util->getPrimaryDelimiter('block')),
+
+            Schema\Arr::make('mathren.primary_inline_delimiter')
+                ->get(fn (): array => $this->util->getPrimaryDelimiter('inline')),
+
+            Schema\Arr::make('mathren.primary_block_delimiter_alias')
+                ->get(fn (): array => $this->util->getPrimaryDelimiter('aliasBlock')),
+
+            Schema\Arr::make('mathren.primary_inline_delimiter_alias')
+                ->get(fn (): array => $this->util->getPrimaryDelimiter('aliasInline')),
+
+            Schema\Arr::make('mathren.primary_block_asciimath_delimiter')
+                ->get(fn (): array => $this->util->getPrimaryDelimiter('blockAscii')),
+
+            Schema\Arr::make('mathren.primary_inline_asciimath_delimiter')
+                ->get(fn (): array => $this->util->getPrimaryDelimiter('inlineAscii')),
+
+            Schema\Arr::make('mathren.primary_block_asciimath_delimiter_alias')
+                ->get(fn (): array => $this->util->getPrimaryDelimiter('aliasBlockAscii')),
+
+            Schema\Arr::make('mathren.primary_inline_asciimath_delimiter_alias')
+                ->get(fn (): array => $this->util->getPrimaryDelimiter('aliasInlineAscii')),
+        ];
     }
 }

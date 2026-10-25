@@ -5,11 +5,16 @@
  * file that was distributed with this source code.
  */
 
-// Define delimiters those will be used in `copy-tex` plugin
+// Define delimiters that will be used in `copy-tex` plugin
 // see https://github.com/KaTeX/KaTeX/blob/master/contrib/copy-tex/katex2tex.js#L1-L5
-export default function copyDelimiters(delimiters) {
+export default function copyDelimiters(delimiters = {}) {
+  const inlineLeft = delimiters?.inline?.left ?? '[imath]';
+  const inlineRight = delimiters?.inline?.right ?? '[/imath]';
+  const blockLeft = delimiters?.block?.left ?? '[math]';
+  const blockRight = delimiters?.block?.right ?? '[/math]';
+
   return {
-    inline: [delimiters.inline.left, delimiters.inline.right],
-    display: [delimiters.block.left, delimiters.block.right],
+    inline: [inlineLeft, inlineRight],
+    display: [blockLeft, blockRight],
   };
 }

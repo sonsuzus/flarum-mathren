@@ -9,9 +9,11 @@ import katexReplaceWithTex from '../katex/katex2tex';
 import setKatexRange from '../katex/setKatexRange';
 
 export default function selectedText(body, copyDelimiters) {
+  if (!body || !body[0]) return '';
+
   const selection = window.getSelection();
 
-  if (!selection.isCollapsed) {
+  if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
     const range = selection.getRangeAt(0);
     const parent = range.commonAncestorContainer;
 
@@ -44,5 +46,6 @@ export default function selectedText(body, copyDelimiters) {
       return clone.text();
     }
   }
+
   return '';
 }

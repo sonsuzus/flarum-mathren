@@ -5,19 +5,44 @@
  * file that was distributed with this source code.
  */
 
-import DiscussionComposer from 'flarum/forum/components/DiscussionComposer';
-import ReplyComposer from 'flarum/forum/components/ReplyComposer';
+const FLARUM_COMPOSER_MODULES = [
+  'flarum/forum/components/DiscussionComposer',
+  'flarum/forum/components/EditPostComposer',
+  'flarum/forum/components/ReplyComposer',
+];
 
 /**
  * Returns a list of native Flarum composer components.
- * This list will be used to determine if a composer
- * defined by a third-party extension.
  *
- * @return { Array }
+ * In Flarum 2.0, composer components (including `EditPostComposer`,
+ * `DiscussionComposer`, and `ReplyComposer`) are lazy-loaded chunks.
+ *
+ * - When `resolveClasses` is `false` (default), returns module path strings
+ *   for safe use with Flarum 2.0's `extend()` / `override()` utilities without
+ *   accessing `.prototype` on unloaded modules.
+ * - When `resolveClasses` is `true`, safely queries `flarum.reg` at runtime
+ *   and returns the currently loaded composer component classes.
+ *
+ * @param {boolean} resolveClasses
+ * @return {Array<string|Function>}
  */
-export default function getFlarumComposers() {
-  return [
-    DiscussionComposer, 
-    ReplyComposer
-  ].filter(Boolean);
+export default function getFlarumComposers(resolveClasses = false) {
+  if (!resolveClasses) {
+    return [...FLARUM_COMPOSER_MODULES];
+  }
+
+  if (typeof flarum === 'undefined' || !flarum.reg) {
+    return [];
+  }
+
+  return FLARUM_COMPOSER_MODULES.map((modulePath) => {
+    const registryPath = modulePath.replace(/^flarum\//, '');
+
+    try {
+      return flarum.reg.get('core', registryPath);
+    } catch (e) {
+      // Lazy-loaded composer chunk has not been requested yet; ignore safely.
+      return null;
+    }
+  }).filter(Boolean);
 }

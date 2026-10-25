@@ -7,8 +7,6 @@
 
 import { extend, override } from 'flarum/common/extend';
 import app from 'flarum/forum/app';
-import Page from 'flarum/common/components/Page';
-import TextEditor from 'flarum/common/components/TextEditor';
 
 import addCopyListener from './addCopyListener';
 import addPostQuoteButton from './addPostQuoteButton';
@@ -17,18 +15,20 @@ import delimiterReplacer from './utils/katex/delimiterReplacer';
 import getPrimaryDelimiters from './utils/katex/getPrimaryDelimiters';
 import getFlarumComposers from './utils/getFlarumComposers';
 
+const toArray = (value) => (Array.isArray(value) ? value : []);
+
 app.initializers.add(
   'the-turk-mathren',
   () => {
     const replaceDelimiters = (text = '', reverse = false, returnAsText = true) => {
       const span = document.createElement('span');
-      span.textContent = text;
+      span.textContent = text || '';
 
       return delimiterReplacer(span, delimiterReplacerOptions(reverse), returnAsText);
     };
 
     const preserveAliasesInCodeTag = (element) => {
-      if (!app.forum.attribute('mathren.aliases_as_primary')) return;
+      if (!element || !app.forum?.attribute('mathren.aliases_as_primary')) return;
 
       const codeNodeList = element.querySelectorAll('code');
 
@@ -41,23 +41,22 @@ app.initializers.add(
 
     const delimiterReplacerOptions = (reverse = false) => {
       const primaryDelimiters = getPrimaryDelimiters(app.forum, !reverse) || {};
-      
-      // Tanımsız değerlere karşı boş dizi `[]` koruması eklendi
-      const bbDelimiters = app.forum.attribute('mathren.bbcode_delimiters') || [];
-      const explicitBBDelimiters = app.forum.attribute('mathren.explicit_bbcode_delimiters') || [];
-      const aliasDelimiters = app.forum.attribute('mathren.alias_delimiters') || [];
-      
+
+      const bbDelimiters = toArray(app.forum?.attribute('mathren.bbcode_delimiters') || []);
+      const explicitBBDelimiters = toArray(app.forum?.attribute('mathren.explicit_bbcode_delimiters') || []);
+      const aliasDelimiters = toArray(app.forum?.attribute('mathren.alias_delimiters') || []);
+
       const splitAtDelimiters = reverse ? bbDelimiters.concat(explicitBBDelimiters) : aliasDelimiters;
 
-      let options = {
+      const options = {
         primaryBlockDelimiter: primaryDelimiters.block,
         primaryInlineDelimiter: primaryDelimiters.inline,
-        splitAtDelimiters: splitAtDelimiters || [],
+        splitAtDelimiters: toArray(splitAtDelimiters),
       };
 
-      if (app.forum.attribute('mathren.allow_asciimath')) {
-        options['primaryBlockAsciiMathDelimiter'] = primaryDelimiters.block_asciimath;
-        options['primaryInlineAsciiMathDelimiter'] = primaryDelimiters.inline_asciimath;
+      if (app.forum?.attribute('mathren.allow_asciimath')) {
+        options.primaryBlockAsciiMathDelimiter = primaryDelimiters.block_asciimath;
+        options.primaryInlineAsciiMathDelimiter = primaryDelimiters.inline_asciimath;
       }
 
       return options;
@@ -67,39 +66,52 @@ app.initializers.add(
     addTextEditorButton();
     addCopyListener();
 
-    extend(Page.prototype, ['oncreate', 'onupdate'], () => preserveAliasesInCodeTag(document));
+    extend('flarum/common/components/Page', ['oncreate', 'onupdate'], () => preserveAliasesInCodeTag(document));
 
-    if (window.s9e && window.s9e.TextFormatter) {
+    if (window.s9e?.TextFormatter) {
       override(window.s9e.TextFormatter, 'preview', function (original, preview, element) {
         original(replaceDelimiters(preview), element);
         preserveAliasesInCodeTag(element);
       });
     }
 
-    getFlarumComposers().forEach((composer) => {
-      if (!composer) return; // Eksik Flarum 2.0 bileşenlerine karşı koruma
-      
-      override(composer.prototype, 'onsubmit', function (original) {
-        if (this.composer && this.composer.fields) {
+    // Override onsubmit across all native Flarum composers (DiscussionComposer,
+    // EditPostComposer, ReplyComposer) via Flarum 2.0 string module paths so
+    // lazy-loaded composer chunks are hooked safely when loaded.
+    getFlarumComposers().forEach((composerPath) => {
+      if (!composerPath) return;
+
+      override(composerPath, 'onsubmit', function (original) {
+        if (this.composer?.fields && typeof this.composer.fields.content === 'function') {
           this.composer.fields.content(replaceDelimiters(this.composer.fields.content()));
         }
+
         return original();
       });
     });
 
-    extend(TextEditor.prototype, 'oncreate', function (original, vnode) {
-      const $textarea = vnode.dom.querySelector('textarea');
-      if (!$textarea || !app.composer || !app.composer.body) return;
+    extend('flarum/common/components/TextEditor', 'oncreate', function (_, vnode) {
+      const $textarea = vnode?.dom?.querySelector('textarea');
+      if (!$textarea || !app.composer?.body) return;
 
       const composerClass = app.composer.body.componentClass || app.composer.body.constructor;
+      const loadedComposers = getFlarumComposers(true);
+      const isNativeComposer = loadedComposers.some(
+        (Composer) => composerClass === Composer || (typeof Composer === 'function' && composerClass?.prototype instanceof Composer)
+      );
 
-      if (getFlarumComposers().indexOf(composerClass) === -1) {
+      if (!isNativeComposer) {
         $textarea.addEventListener('input', function () {
           $textarea.value = replaceDelimiters($textarea.value);
         });
       } else {
-        if (!app.forum.attribute('mathren.aliases_as_primary')) return;
-        $textarea.value = replaceDelimiters(this.attrs.value || this.value || '', true);
+        if (!app.forum?.attribute('mathren.aliases_as_primary')) return;
+        const initialValue = this.attrs?.value || this.value || $textarea.value || '';
+        const replacedValue = replaceDelimiters(initialValue, true);
+        $textarea.value = replacedValue;
+        if (typeof this.attrs?.onchange === 'function') {
+          this.attrs.onchange(replacedValue);
+        }
       }
     });
   },

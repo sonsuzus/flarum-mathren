@@ -7,7 +7,6 @@
 
 import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
-import CommentPost from 'flarum/forum/components/CommentPost';
 import PostQuoteButton from 'ext:flarum/mentions/forum/fragments/PostQuoteButton';
 
 import copyDelimiters from './utils/katex/copyDelimiters';
@@ -15,26 +14,43 @@ import getPrimaryDelimiters from './utils/katex/getPrimaryDelimiters';
 import selectedText from './utils/mentions/selectedText';
 
 export default function addPostQuoteButton() {
-  extend(CommentPost.prototype, 'oncreate', function () {
-    if (!('flarum-mentions' in flarum.extensions) || !app.forum.attribute('mathren.enable_copy_tex') || !PostQuoteButton) return;
+  extend('flarum/forum/components/CommentPost', 'oncreate', function () {
+    const QuoteButton =
+      PostQuoteButton ||
+      (() => {
+        try {
+          return flarum.reg?.get('flarum-mentions', 'forum/fragments/PostQuoteButton');
+        } catch (e) {
+          return null;
+        }
+      })();
 
-    const post = this.attrs.post;
+    if (!('flarum-mentions' in flarum.extensions) || !app.forum?.attribute('mathren.enable_copy_tex') || !QuoteButton) return;
+
+    const post = this.attrs?.post;
+    if (!post) return;
+
     const delimiters = getPrimaryDelimiters(app.forum);
 
-    if (post.isHidden() || (app.session.user && !post.discussion().canReply())) return;
+    if (post.isHidden() || (app.session?.user && !post.discussion()?.canReply())) return;
 
     const $postBody = this.$('.Post-body');
     const $container = $('<div class="MathRen-quoteButtonContainer"></div>');
-    const button = new PostQuoteButton(post);
+    const button = new QuoteButton(post);
 
-    const handler = function (e) {
+    this.mathrenQuoteHandler = function (e) {
       setTimeout(() => {
         const content = selectedText($postBody, copyDelimiters(delimiters));
         if (content) {
           button.content = content;
           m.render($container[0], button.render());
 
-          const rects = window.getSelection().getRangeAt(0).getClientRects();
+          const selection = window.getSelection();
+          if (!selection || !selection.rangeCount) return;
+
+          const rects = selection.getRangeAt(0).getClientRects();
+          if (!rects.length) return;
+
           const firstRect = rects[0];
 
           if (e.clientY < firstRect.bottom && e.clientX - firstRect.right < firstRect.left - e.clientX) {
@@ -47,10 +63,17 @@ export default function addPostQuoteButton() {
       }, 1);
     };
 
-    this.$().after($container).on('mouseup', handler);
+    this.$().after($container).on('mouseup', this.mathrenQuoteHandler);
 
     if ('ontouchstart' in window) {
-      document.addEventListener('selectionchange', handler, false);
+      document.addEventListener('selectionchange', this.mathrenQuoteHandler, false);
+    }
+  });
+
+  extend('flarum/forum/components/CommentPost', 'onremove', function () {
+    if (this.mathrenQuoteHandler && 'ontouchstart' in window) {
+      document.removeEventListener('selectionchange', this.mathrenQuoteHandler, false);
+      this.mathrenQuoteHandler = null;
     }
   });
 }

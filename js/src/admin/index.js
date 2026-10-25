@@ -7,18 +7,23 @@
 
 import { extend } from 'flarum/common/extend';
 import app from 'flarum/admin/app';
-import ExtensionPage from 'flarum/admin/components/ExtensionPage';
+import Icon from 'flarum/common/components/Icon';
 import Select from 'flarum/common/components/Select';
 import Switch from 'flarum/common/components/Switch';
 
 app.initializers.add('the-turk-mathren', () => {
-  extend(ExtensionPage.prototype, 'sections', function (items) {
-    if (this.extension.id !== 'the-turk-mathren') return;
+  extend('flarum/admin/components/ExtensionPage', 'sections', function (items) {
+    if (this.extension?.id !== 'the-turk-mathren') return;
 
     if (items.has('permissions')) {
       items.remove('permissions');
     }
   });
+
+  const isTruthySetting = (stream) => {
+    const val = typeof stream === 'function' ? stream() : stream;
+    return !!val && val !== '0';
+  };
 
   app.registry.for('the-turk-mathren').registerSetting(function () {
     return (
@@ -29,7 +34,7 @@ app.initializers.add('the-turk-mathren', () => {
           <h4>{app.translator.trans('the-turk-mathren.admin.settings.delimiters_label')}</h4>
           <div className="helpText">{app.translator.trans('the-turk-mathren.admin.settings.delimiters_text')}</div>
           <div className="helpText">
-            <i className="fa-icon fas fa-exclamation-circle" />
+            <Icon name="fas fa-exclamation-circle" className="fa-icon" />
             {app.translator.trans('the-turk-mathren.admin.settings.bbcode_delimiters_rule_text')}
           </div>
           <div className="MathRen--flex Mathren--binary">
@@ -129,7 +134,7 @@ app.initializers.add('the-turk-mathren', () => {
             </div>
           </div>
           <div className="helpText">
-            <i className="fa-icon fas fa-exclamation-circle" />
+            <Icon name="fas fa-exclamation-circle" className="fa-icon" />
             {app.translator.trans('the-turk-mathren.admin.settings.primary_delimiters_text')}
           </div>
           <div className="MathRen--flex">
@@ -146,38 +151,38 @@ app.initializers.add('the-turk-mathren', () => {
                   htmlAndMathml: 'HTML & MathML',
                 }}
                 buttonClassName="Button"
-                onchange={this.settings['the-turk-mathren.output_mode']}
+                onchange={this.setting('the-turk-mathren.output_mode')}
               />
             </div>
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting('the-turk-mathren.enable_fleqn')() && this.setting('the-turk-mathren.enable_fleqn')() !== '0'}
-              onchange={this.settings['the-turk-mathren.enable_fleqn']}
+              state={isTruthySetting(this.setting('the-turk-mathren.enable_fleqn'))}
+              onchange={this.setting('the-turk-mathren.enable_fleqn')}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.enable_fleqn_label')}
             </Switch>
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting('the-turk-mathren.enable_leqno')() && this.setting('the-turk-mathren.enable_leqno')() !== '0'}
-              onchange={this.settings['the-turk-mathren.enable_leqno']}
+              state={isTruthySetting(this.setting('the-turk-mathren.enable_leqno'))}
+              onchange={this.setting('the-turk-mathren.enable_leqno')}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.enable_leqno_label')}
             </Switch>
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting('the-turk-mathren.color_is_text_color')() && this.setting('the-turk-mathren.color_is_text_color')() !== '0'}
-              onchange={this.settings['the-turk-mathren.color_is_text_color']}
+              state={isTruthySetting(this.setting('the-turk-mathren.color_is_text_color'))}
+              onchange={this.setting('the-turk-mathren.color_is_text_color')}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.color_is_text_color_label')}
             </Switch>
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting('the-turk-mathren.throw_on_error')() && this.setting('the-turk-mathren.throw_on_error')() !== '0'}
-              onchange={this.settings['the-turk-mathren.throw_on_error']}
+              state={isTruthySetting(this.setting('the-turk-mathren.throw_on_error'))}
+              onchange={this.setting('the-turk-mathren.throw_on_error')}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.throw_on_error_label')}
             </Switch>
@@ -216,7 +221,7 @@ app.initializers.add('the-turk-mathren', () => {
             <label>{app.translator.trans('the-turk-mathren.admin.settings.macros_label')}</label>
             <div className="helpText">{app.translator.trans('the-turk-mathren.admin.settings.macros_text')}</div>
             <div className="helpText">
-              <i className="fa-icon fas fa-exclamation-circle" />
+              <Icon name="fas fa-exclamation-circle" className="fa-icon" />
               {app.translator.trans('the-turk-mathren.admin.settings.java_syntax_text')}
             </div>
             <textarea className="FormControl" bidi={this.setting('the-turk-mathren.macros')} placeholder='"\\RR": "\\mathbb{R}"' />
@@ -265,38 +270,38 @@ app.initializers.add('the-turk-mathren', () => {
           <hr />
           <div className="Form-group">
             <Switch
-              state={!!this.setting('the-turk-mathren.enable_editor_buttons')() && this.setting('the-turk-mathren.enable_editor_buttons')() !== '0'}
-              onchange={this.settings['the-turk-mathren.enable_editor_buttons']}
+              state={isTruthySetting(this.setting('the-turk-mathren.enable_editor_buttons'))}
+              onchange={this.setting('the-turk-mathren.enable_editor_buttons')}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.enable_editor_buttons_label')}
             </Switch>
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting('the-turk-mathren.aliases_as_primary')() && this.setting('the-turk-mathren.aliases_as_primary')() !== '0'}
-              onchange={this.settings['the-turk-mathren.aliases_as_primary']}
+              state={isTruthySetting(this.setting('the-turk-mathren.aliases_as_primary'))}
+              onchange={this.setting('the-turk-mathren.aliases_as_primary')}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.aliases_as_primary_label')}
             </Switch>
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting('the-turk-mathren.allow_asciimath')() && this.setting('the-turk-mathren.allow_asciimath')() !== '0'}
-              onchange={this.settings['the-turk-mathren.allow_asciimath']}
+              state={isTruthySetting(this.setting('the-turk-mathren.allow_asciimath'))}
+              onchange={this.setting('the-turk-mathren.allow_asciimath')}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.allow_asciimath_label')}
             </Switch>
           </div>
           <div className="Form-group">
             <Switch
-              state={!!this.setting('the-turk-mathren.enable_copy_tex')() && this.setting('the-turk-mathren.enable_copy_tex')() !== '0'}
-              onchange={this.settings['the-turk-mathren.enable_copy_tex']}
+              state={isTruthySetting(this.setting('the-turk-mathren.enable_copy_tex'))}
+              onchange={this.setting('the-turk-mathren.enable_copy_tex')}
             >
               {app.translator.trans('the-turk-mathren.admin.settings.enable_copy_tex_label')}
             </Switch>
           </div>
           <div className="helpText">
-            <i className="fa-icon fas fa-exclamation-circle" />
+            <Icon name="fas fa-exclamation-circle" className="fa-icon" />
             {app.translator.trans('the-turk-mathren.admin.settings.quote_button_text')}
           </div>
         </div>

@@ -7,7 +7,6 @@
 
 import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
-import DiscussionPage from 'flarum/forum/components/DiscussionPage';
 
 import copyDelimiters from './utils/katex/copyDelimiters';
 import katexReplaceWithTex from './utils/katex/katex2tex';
@@ -15,15 +14,15 @@ import getPrimaryDelimiters from './utils/katex/getPrimaryDelimiters';
 import setKatexRange from './utils/katex/setKatexRange';
 
 export default function addCopyListener() {
-  extend(DiscussionPage.prototype, 'oncreate', function () {
-    if (!app.forum.attribute('mathren.enable_copy_tex')) return;
+  extend('flarum/forum/components/DiscussionPage', 'oncreate', function () {
+    if (!app.forum?.attribute('mathren.enable_copy_tex')) return;
 
     const delimiters = getPrimaryDelimiters(app.forum);
 
-    document.addEventListener('copy', function (event) {
+    this.mathrenCopyHandler = function (event) {
       const selection = window.getSelection();
 
-      if (selection.isCollapsed || !event.clipboardData) {
+      if (!selection || selection.isCollapsed || !selection.rangeCount || !event.clipboardData) {
         return;
       }
 
@@ -46,6 +45,15 @@ export default function addCopyListener() {
       clipboardData.setData('text/plain', katexReplaceWithTex(fragment, copyDelimiters(delimiters)).textContent);
 
       event.preventDefault();
-    });
+    };
+
+    document.addEventListener('copy', this.mathrenCopyHandler);
+  });
+
+  extend('flarum/forum/components/DiscussionPage', 'onremove', function () {
+    if (this.mathrenCopyHandler) {
+      document.removeEventListener('copy', this.mathrenCopyHandler);
+      this.mathrenCopyHandler = null;
+    }
   });
 }

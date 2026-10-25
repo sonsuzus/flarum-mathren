@@ -41,7 +41,10 @@
                 "name": "fas fa-square-root-alt",
                 "backgroundColor": "#b72a2a",
                 "color": "#fff"
-            }
+            },
+            "optional-dependencies": [
+                "flarum/mentions"
+            ]
         }
     }
 }

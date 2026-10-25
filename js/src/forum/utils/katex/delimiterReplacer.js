@@ -7,13 +7,13 @@
 
 import splitAtDelimiters from './splitAtDelimiters';
 
-const replaceDelimitersInText = function (text, options) {
-  const data = splitAtDelimiters(text, options.splitAtDelimiters);
+const replaceDelimitersInText = function (text, options = {}) {
+  const delimiters = Array.isArray(options?.splitAtDelimiters) ? options.splitAtDelimiters : [];
+  const data = splitAtDelimiters(text, delimiters);
 
   if (data.length === 1 && data[0].type === 'text') {
     // There is no formula in the text.
-    // Let's return null which means there is no need to replace
-    // the current text node with a new one.
+    // Return null so the current text node is not unnecessarily replaced.
     return null;
   }
 
@@ -32,10 +32,14 @@ const replaceDelimitersInText = function (text, options) {
           ? options.primaryBlockAsciiMathDelimiter
           : options.primaryBlockDelimiter
         : asciiMath
-        ? options.primaryInlineAsciiMathDelimiter
-        : options.primaryInlineDelimiter;
+          ? options.primaryInlineAsciiMathDelimiter
+          : options.primaryInlineDelimiter;
 
-      span.textContent = delimiter['left'] + math + delimiter['right'];
+      if (delimiter && typeof delimiter.left === 'string' && typeof delimiter.right === 'string') {
+        span.textContent = delimiter.left + math + delimiter.right;
+      } else {
+        span.textContent = data[i].rawData || math;
+      }
 
       fragment.appendChild(span);
     }
@@ -45,17 +49,20 @@ const replaceDelimitersInText = function (text, options) {
 };
 
 /**
- * We'll match with math expressions and replace their
- * BBCode delimiters `[math]...[/math]` with their aliases `($$...$$)`.
- * This function should only be called when we set the
- * `aliases_as_primary` setting to true from the settings page.
+ * Matches math expressions and replaces their BBCode delimiters
+ * `[math]...[/math]` with their aliases `($$...$$)` (or vice-versa).
  *
- * @param elem    The element that we are looking for math expressions in it.
- * @param options Contains primary replacer delimiter information.
+ * @param {Node} elem            The element to inspect for math expressions.
+ * @param {Object} options       Contains primary replacer delimiter information.
+ * @param {boolean} returnAsText Whether to return `elem.innerText` instead of `elem`.
  *
- * @return { string }
+ * @return {string|Node}
  */
-const delimiterReplacer = function (elem, options, returnAsText) {
+export default function delimiterReplacer(elem, options = {}, returnAsText = false) {
+  if (!elem || !elem.childNodes) {
+    return returnAsText === true ? '' : elem;
+  }
+
   for (let i = 0; i < elem.childNodes.length; i++) {
     const childNode = elem.childNodes[i];
 
@@ -68,12 +75,9 @@ const delimiterReplacer = function (elem, options, returnAsText) {
         elem.replaceChild(frag, childNode);
       }
     } else if (childNode.nodeType === 1) {
-      delimiterReplacer(childNode, options);
+      delimiterReplacer(childNode, options, false);
     }
-    // Otherwise, it's something else, and ignore it.
   }
 
   return returnAsText === true ? elem.innerText : elem;
-};
-
-export default delimiterReplacer;
+}

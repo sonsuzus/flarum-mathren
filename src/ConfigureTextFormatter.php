@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of MathRen.
  *
@@ -23,35 +25,31 @@ class ConfigureTextFormatter
 
     /**
      * Configure s9e/TextFormatter.
-     *
-     * @param Configurator $config TextFormatter configurator.
-     * @return void
      */
     public function __invoke(Configurator $config): void
     {
         $katexOptions = $this->util->getKatexOptions();
-        $bbDelimiters = $this->util->getDelimitersWithOptions('bbcode');
-        $allowAsciiMath = \boolval($this->util->get('allow_asciimath'));
-
-        if ($allowAsciiMath) {
-            $bbDelimiters = \array_merge(
-                $bbDelimiters,
-                $this->util->getDelimitersWithOptions('bbcode', true)
-            );
-        }
-
+        $bbDelimiters = $this->util->getForumDelimiters('bbcode');
+        $allowAsciiMath = $this->util->getBool('allow_asciimath');
         $classes = $this->util->getClasses();
 
         foreach ($bbDelimiters as $delimiter) {
-            $delimiterText = Str::after(Str::before($delimiter['left'], ']'), '[');
-            $className = $delimiter['display'] === true ? 'block' : 'inline';
-            $displayMode = $delimiter['display'] === true;
+            $left = $delimiter['left'] ?? '';
+            $right = $delimiter['right'] ?? '';
+            $delimiterText = \trim(Str::after(Str::before($left, ']'), '['));
+
+            if ($delimiterText === '' || $right === '') {
+                continue;
+            }
+
+            $displayMode = ($delimiter['display'] ?? false) === true;
+            $className = $displayMode ? 'block' : 'inline';
 
             $options = \json_encode(Arr::add($katexOptions, 'displayMode', $displayMode));
 
-            if ($allowAsciiMath && ($delimiter['ascii'] === true)) {
+            if ($allowAsciiMath && (($delimiter['ascii'] ?? false) === true)) {
                 $config->BBCodes->addCustom(
-                    $delimiter['left'].'{TEXT}'.$delimiter['right'],
+                    $left.'{TEXT}'.$right,
                     '<span>
                         <xsl:attribute name="class">'.$classes[$className].'</xsl:attribute>
                         <xsl:attribute name="data-s9e-livepreview-onupdate">if(typeof katex!==\'undefined\')katex.render((typeof ascii2tex!==\'undefined\') ? ascii2tex.parse(this.innerText) : this.innerText, this, '.$options.')</xsl:attribute>
@@ -72,7 +70,7 @@ class ConfigureTextFormatter
                 );
             } else {
                 $config->BBCodes->addCustom(
-                    $delimiter['left'].'{TEXT}'.$delimiter['right'],
+                    $left.'{TEXT}'.$right,
                     '<span>
                         <xsl:attribute name="class">'.$classes[$className].'</xsl:attribute>
                         <xsl:attribute name="data-s9e-livepreview-onupdate">if(typeof katex!==\'undefined\')katex.render(this.innerText, this, '.$options.')</xsl:attribute>
@@ -87,9 +85,11 @@ class ConfigureTextFormatter
                 );
             }
 
-            $tag = $config->tags[$delimiterText];
-            $tag->rules->ignoreTags();
-            $tag->rules->disableAutoLineBreaks();
+            if (isset($config->tags[$delimiterText])) {
+                $tag = $config->tags[$delimiterText];
+                $tag->rules->ignoreTags();
+                $tag->rules->disableAutoLineBreaks();
+            }
         }
     }
 }
